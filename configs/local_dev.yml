@@ -1,0 +1,11 @@
+host:
+  domain: localhost
+  port: 8081
+postgre:
+  server: localhost
+  port: 5432
+  username: postgres
+  password: "123"
+  dbname: quarticle_test
+yelp:
+  token: Bearer Z5QzsWaC1oiBNg-vf9ZylfBdphfGkbqYr7B1FCmvtn5eDwJf5Ql1ANidgc5LdgruYWKjoI56LG9eg4za7muZ5kh3gyuPSFMEr9q2h0kDdQQo3q4N9FcKqCVI3IwjZHYx

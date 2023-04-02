@@ -1,0 +1,49 @@
+[
+  {
+    "_id": "86fb0fc6-9289-48fb-9f26-f7d781179193",
+    "colId": "a83a435f-5151-4740-98bf-d031c0c7510a",
+    "containerId": "",
+    "name": "Upload CSV",
+    "url": "localhost:8081/csv",
+    "method": "POST",
+    "sortNum": 20000,
+    "created": "2023-03-29T01:05:05.079Z",
+    "modified": "2023-04-02T08:00:34.393Z",
+    "headers": [],
+    "params": [],
+    "body": {
+      "type": "binary",
+      "raw": "",
+      "form": [],
+      "binary": "..\\..\\..\\..\\..\\Users\\Enes\\Desktop\\places_interview (1).csv"
+    },
+    "tests": []
+  },
+  {
+    "_id": "0b4036af-abdb-4ee2-93d7-60c2ca665b32",
+    "colId": "a83a435f-5151-4740-98bf-d031c0c7510a",
+    "containerId": "",
+    "name": "List Places",
+    "url": "localhost:8081/listPlaces",
+    "method": "GET",
+    "sortNum": 10000,
+    "created": "2023-04-01T06:08:19.079Z",
+    "modified": "2023-04-01T13:11:27.253Z",
+    "headers": [],
+    "params": [
+      {
+        "name": "limit",
+        "value": "2",
+        "isDisabled": true,
+        "isPath": false
+      },
+      {
+        "name": "offset",
+        "value": "0",
+        "isDisabled": true,
+        "isPath": false
+      }
+    ],
+    "tests": []
+  }
+]
