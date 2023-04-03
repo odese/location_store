@@ -42,7 +42,7 @@ func CreatePlaces(places []models.Place) (err error) {
 		place := places[i]
 		err = CreatePlace(place)
 		if err != nil {
-			if utils.ErrDuplicateKey(err) {
+			if utils.PostgreDuplicateKeyErr(err) {
 				continue
 			} else {
 				return err
@@ -58,9 +58,12 @@ func CreatePlaces(places []models.Place) (err error) {
 func CreatePlace(place models.Place) (err error) {
 	err = postgreRepo.InsertPlace(place)
 	if err != nil {
-		if utils.ErrDuplicateKey(err) {
-			log.Warn().Err(err).Str("Key", place.PlaceID).Msg("Duplicate key")
+		if utils.PostgreDuplicateKeyErr(err) {
+			// log.Debug().Err(err).Str("Key", place.PlaceID).Msg("Duplicate key")
 			return err
+		} else if utils.PostgreConnBusyErr(err) {
+			log.Warn().Err(err).Str("Key", place.PlaceID).Msg("Connection busy")
+			CreatePlace(place)
 		} else {
 			log.Error().Err(err).Msg("Error on inserting place")
 			return err

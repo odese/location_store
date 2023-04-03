@@ -26,9 +26,18 @@ func WriteHttpJsonResponse(w http.ResponseWriter, statusCode int, response inter
 	json.NewEncoder(w).Encode(response)
 }
 
-func ErrDuplicateKey(err error) (isDublicateKey bool) {
+func PostgreDuplicateKeyErr(err error) (isDublicateKey bool) {
 	if err != nil {
 		if strings.Contains(err.Error(), "duplicate key value violates unique constraint") {
+			return true
+		}
+	}
+	return isDublicateKey
+}
+
+func PostgreConnBusyErr(err error) (isDublicateKey bool) {
+	if err != nil {
+		if strings.Contains(err.Error(), "conn busy") {
 			return true
 		}
 	}
