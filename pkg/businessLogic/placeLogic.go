@@ -218,8 +218,8 @@ func convertBusinessesToPlaces(businessList []models.YelpBusiness) (places []mod
 
 func convertBusinessToPlace(business models.YelpBusiness) (place models.Place) {
 	place.PlaceID = business.ID
-	place.Latitude = fmt.Sprintln(business.Coordinates.Latitude)
-	place.Longitude = fmt.Sprintln(business.Coordinates.Longitude)
+	place.Latitude = fmt.Sprintf("%f", business.Coordinates.Latitude)
+	place.Longitude = fmt.Sprintf("%f", business.Coordinates.Longitude)
 	place.Name = business.Name
 
 	return place
