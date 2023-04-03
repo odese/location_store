@@ -187,7 +187,7 @@ func CollectAllNearbyYelpBusinesses(place models.Place) (businessList []models.Y
 			offset := i * utils.LimitForYelpInt
 			offsetStr := strconv.Itoa(offset)
 
-			// TODO: In case of requests are too fast, or any other error,
+			// TODO: In case of requests are too fast like exceeding rate limiting to the Yelp API, or any other error,
 			// we should implement some retry mechanism until it get success.
 			searchResponse, err = yelpRepo.SearchBusinesses("", place.Latitude, place.Longitude, offsetStr)
 			if err != nil {
