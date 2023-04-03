@@ -25,7 +25,7 @@ func UploadCSV(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	err = logic.GetAndSaveNearbyPlacesByList(places)
+	err = logic.GetAndSaveNearbyPlacesByListConcurently(places)
 	if err != nil {
 		log.Error().Err(err).Msg("Error on getting and saving nearby places")
 		utils.WriteHttpJsonResponse(w, http.StatusBadRequest, err.Error())

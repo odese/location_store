@@ -10,6 +10,7 @@ import (
 	"location_store/pkg/repositories/yelpRepo"
 	"location_store/pkg/utils"
 	"strconv"
+	"sync"
 )
 
 // ParseCsvIntoPlaceModel parses the CSV into a Place model
@@ -53,6 +54,7 @@ func CreatePlaces(places []models.Place) (err error) {
 }
 
 // CreatePlace, creates a place in the database.
+// XXX: How to act if there is an error like too mant connections to DB?
 func CreatePlace(place models.Place) (err error) {
 	err = postgreRepo.InsertPlace(place)
 	if err != nil {
@@ -78,7 +80,7 @@ func ListPlaces(offset, limit int) (response dto.ListOfPlaces, err error) {
 		log.Error().Err(err).Msg("Error getting places from DB")
 		return response, err
 	}
-	
+
 	response.TotalCount, err = postgreRepo.CountPlaces()
 	if err != nil {
 		log.Error().Err(err).Msg("Error counting places from DB")
@@ -97,6 +99,52 @@ func GetAndSaveNearbyPlacesByList(places []models.Place) (err error) {
 	return err
 }
 
+// GetAndSaveNearbyPlacesByListConcurently, gets nearby places from Yelp and saves them in the database.
+func GetAndSaveNearbyPlacesByListConcurently(places []models.Place) (err error) {
+	// Job is defined as searching & collecting & saving nearby businesses for each individual place in the csv file.
+	// So, the total number of jobs is the number of places in the csv file.
+	totalJobs := places
+	totalJobCount := len(totalJobs)
+	// Create a channel to assign job via (a.k.a) place.
+	jobs := make(chan models.Place, totalJobCount)
+
+	var worker sync.WaitGroup
+
+	// XXX: What if the number of places in the csv file is less than the maxWorker?
+	maxWorker := 5 // In other words max concurrent jobs
+	for i := 0; i < maxWorker; i++ {
+		worker.Add(1)
+		go work(jobs, &worker)
+	}
+
+	// Assign jobs to workers
+	for jobIndex := 0; jobIndex < totalJobCount; jobIndex++ {
+		job := totalJobs[jobIndex]
+		jobs <- job
+	}
+	close(jobs)
+
+	worker.Wait()
+
+	return err
+}
+
+func work(jobs <-chan models.Place, worker *sync.WaitGroup) {
+	defer worker.Done()
+
+	for place := range jobs {
+		err := GetAndSaveNearbyPlaces(place)
+		if err != nil {
+			// XXX: What if there is an error on one of the jobs?
+			// Should we stop the whole process?
+			// Should we continue the process?
+			// Should we retry the failed job?
+			// Should we retry the whole process?
+			log.Error().Err(err).Str("Place key", place.PlaceID).Msg("Error on getting and saving nearby places")
+		}
+	}
+}
+
 // GetAndSaveNearbyPlaces, gets nearby places from Yelp.
 func GetAndSaveNearbyPlaces(place models.Place) (err error) {
 	businessList, err := CollectAllNearbyYelpBusinesses(place)
@@ -110,13 +158,12 @@ func GetAndSaveNearbyPlaces(place models.Place) (err error) {
 		return err
 	}
 
-	placeList := convertBusinessesToPlaces(businessList) 
+	placeList := convertBusinessesToPlaces(businessList)
 
 	err = CreatePlaces(placeList)
 	if err != nil {
 		log.Error().Err(err).Msg("Error on creating places")
 	}
-
 
 	return err
 }
@@ -140,7 +187,7 @@ func CollectAllNearbyYelpBusinesses(place models.Place) (businessList []models.Y
 			offset := i * utils.LimitForYelpInt
 			offsetStr := strconv.Itoa(offset)
 
-			// TODO: In case of requests are too fast, or any other error, 
+			// TODO: In case of requests are too fast, or any other error,
 			// we should implement some retry mechanism until it get success.
 			searchResponse, err = yelpRepo.SearchBusinesses("", place.Latitude, place.Longitude, offsetStr)
 			if err != nil {
@@ -171,7 +218,7 @@ func convertBusinessesToPlaces(businessList []models.YelpBusiness) (places []mod
 
 func convertBusinessToPlace(business models.YelpBusiness) (place models.Place) {
 	place.PlaceID = business.ID
-	place.Latitude = fmt.Sprintln(business.Coordinates.Latitude)  
+	place.Latitude = fmt.Sprintln(business.Coordinates.Latitude)
 	place.Longitude = fmt.Sprintln(business.Coordinates.Longitude)
 	place.Name = business.Name
 
