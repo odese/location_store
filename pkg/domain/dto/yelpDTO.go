@@ -9,3 +9,10 @@ type YelpSearchBusinessesResponse struct {
 	} `json:"region"`
 	Businesses []models.YelpBusiness `json:"businesses"`
 }
+
+type YelpErrorResponse struct {
+	Error struct {
+		Code        string `json:"code"`
+		Description string `json:"description"`
+	} `json:"error"`
+}

@@ -6,6 +6,7 @@ import (
 	"io"
 	"net/http"
 	"strings"
+	"location_store/pkg/domain/dto"
 )
 
 // GetEnvValue ...
@@ -42,4 +43,11 @@ func PostgreConnBusyErr(err error) (isDublicateKey bool) {
 		}
 	}
 	return isDublicateKey
+}
+
+func YelpTooManyRequestsErr(errResponse dto.YelpErrorResponse) (isTooManyRequests bool) {
+	if errResponse.Error.Code == "TOO_MANY_REQUESTS_PER_SECOND" {
+		return true
+	}
+	return isTooManyRequests
 }

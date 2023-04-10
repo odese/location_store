@@ -37,7 +37,7 @@ func ParseCsvIntoPlaceModel(payload io.ReadCloser) (places []models.Place, err e
 }
 
 // CreatePlaces, creates a list of places in the database.
-func CreatePlaces(places []models.Place) (err error) {
+func CreatePlaces(places []models.Place) (successAmount int, err error) {
 	for i := 0; i < len(places); i++ {
 		place := places[i]
 		err = CreatePlace(place)
@@ -45,12 +45,14 @@ func CreatePlaces(places []models.Place) (err error) {
 			if utils.PostgreDuplicateKeyErr(err) {
 				continue
 			} else {
-				return err
+				return successAmount, err
 			}
+		} else {
+			successAmount++
 		}
 	}
 
-	return nil
+	return successAmount, nil
 }
 
 // CreatePlace, creates a place in the database.
@@ -63,7 +65,8 @@ func CreatePlace(place models.Place) (err error) {
 			return err
 		} else if utils.PostgreConnBusyErr(err) {
 			log.Warn().Err(err).Str("Key", place.PlaceID).Msg("Connection busy")
-			CreatePlace(place)
+			err = CreatePlace(place)
+			return err
 		} else {
 			log.Error().Err(err).Msg("Error on inserting place")
 			return err
@@ -86,11 +89,21 @@ func ListPlaces(offset, limit int) (response dto.ListOfPlaces, err error) {
 
 	response.TotalCount, err = postgreRepo.CountPlaces()
 	if err != nil {
-		log.Error().Err(err).Msg("Error counting places from DB")
+		log.Error().Err(err).Msg("Error counting places on DB")
 		return response, err
 	}
 
 	return response, err
+}
+
+func CountPlaces() (count int, err error) {
+	count, err = postgreRepo.CountPlaces()
+	if err != nil {
+		log.Error().Err(err).Msg("Error counting places on DB")
+		return count, err
+	}
+
+	return count, err
 }
 
 // GetAndSaveNearbyPlacesByList, gets nearby places from Yelp and saves them in the database.
@@ -103,7 +116,7 @@ func GetAndSaveNearbyPlacesByList(places []models.Place) (err error) {
 }
 
 // GetAndSaveNearbyPlacesByListConcurently, gets nearby places from Yelp and saves them in the database.
-func GetAndSaveNearbyPlacesByListConcurently(places []models.Place) (err error) {
+func GetAndSaveNearbyPlacesByListConcurently(places []models.Place) (response dto.CountsByPlaces, err error) {
 	// Job is defined as searching & collecting & saving nearby businesses for each individual place in the csv file.
 	// So, the total number of jobs is the number of places in the csv file.
 	totalJobs := places
@@ -117,26 +130,31 @@ func GetAndSaveNearbyPlacesByListConcurently(places []models.Place) (err error) 
 	maxWorker := 5 // In other words max concurrent jobs
 	for i := 0; i < maxWorker; i++ {
 		worker.Add(1)
-		go work(jobs, &worker)
+		go work(jobs, &worker, &response)
 	}
 
 	// Assign jobs to workers
 	for jobIndex := 0; jobIndex < totalJobCount; jobIndex++ {
 		job := totalJobs[jobIndex]
+
+		var nearby dto.PlaceWithNearbyCount
+		nearby.PlaceName = job.Name
+		response.Places = append(response.Places, nearby)
+
 		jobs <- job
 	}
 	close(jobs)
 
 	worker.Wait()
 
-	return err
+	return response, err
 }
 
-func work(jobs <-chan models.Place, worker *sync.WaitGroup) {
+func work(jobs <-chan models.Place, worker *sync.WaitGroup, response *dto.CountsByPlaces) {
 	defer worker.Done()
 
 	for place := range jobs {
-		err := GetAndSaveNearbyPlaces(place)
+		nearbyCount, uniqueCount, err := GetAndSaveNearbyPlaces(place)
 		if err != nil {
 			// XXX: What if there is an error on one of the jobs?
 			// Should we stop the whole process?
@@ -145,30 +163,41 @@ func work(jobs <-chan models.Place, worker *sync.WaitGroup) {
 			// Should we retry the whole process?
 			log.Error().Err(err).Str("Place key", place.PlaceID).Msg("Error on getting and saving nearby places")
 		}
+
+		// Update the response
+		for i := 0; i < len(response.Places); i++ {
+			if response.Places[i].PlaceName == place.Name {
+				response.Places[i].NearbyCount = nearbyCount
+				response.Places[i].UniqueCount = uniqueCount
+			}
+		}
+
 	}
 }
 
 // GetAndSaveNearbyPlaces, gets nearby places from Yelp.
-func GetAndSaveNearbyPlaces(place models.Place) (err error) {
+func GetAndSaveNearbyPlaces(place models.Place) (nearbyCount, uniqueCount int, err error) {
 	businessList, err := CollectAllNearbyYelpBusinesses(place)
+	nearbyCount = len(businessList)
 	if err != nil {
 		log.Error().Err(err).Msg("Error on collecting businesses")
-		return err
+		return nearbyCount, uniqueCount, err
 	}
 
-	if len(businessList) == 0 {
-		log.Info().Str("Place key", place.PlaceID).Msg("Has no nearby suggestions")
-		return err
-	}
+	// if len(businessList) == 0 {
+	// 	log.Info().Str("Place key", place.PlaceID).Msg("Has no nearby suggestions")
+	// 	return nearbyCount, uniqueCount, err
+	// }
 
 	placeList := convertBusinessesToPlaces(businessList)
 
-	err = CreatePlaces(placeList)
+	uniqueCount, err = CreatePlaces(placeList)
 	if err != nil {
 		log.Error().Err(err).Msg("Error on creating places")
+		return nearbyCount, uniqueCount, err
 	}
 
-	return err
+	return nearbyCount, uniqueCount, err
 }
 
 func CollectAllNearbyYelpBusinesses(place models.Place) (businessList []models.YelpBusiness, err error) {
@@ -190,8 +219,6 @@ func CollectAllNearbyYelpBusinesses(place models.Place) (businessList []models.Y
 			offset := i * utils.LimitForYelpInt
 			offsetStr := strconv.Itoa(offset)
 
-			// TODO: In case of requests are too fast like exceeding rate limiting to the Yelp API, or any other error,
-			// we should implement some retry mechanism until it get success.
 			searchResponse, err = yelpRepo.SearchBusinesses("", place.Latitude, place.Longitude, offsetStr)
 			if err != nil {
 				log.Warn().Err(err).Msg("Error on searching businesses")

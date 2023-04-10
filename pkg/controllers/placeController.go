@@ -18,21 +18,30 @@ func UploadCSV(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	err = logic.CreatePlaces(places)
+	_, err = logic.CreatePlaces(places)
 	if err != nil {
 		log.Error().Err(err).Msg("Error on creating places")
 		utils.WriteHttpJsonResponse(w, http.StatusBadRequest, err.Error())
 		return
 	}
 
-	err = logic.GetAndSaveNearbyPlacesByListConcurently(places)
+	response, err := logic.GetAndSaveNearbyPlacesByListConcurently(places)
 	if err != nil {
 		log.Error().Err(err).Msg("Error on getting and saving nearby places")
 		utils.WriteHttpJsonResponse(w, http.StatusBadRequest, err.Error())
 		return
 	}
 
-	utils.WriteHttpJsonResponse(w, http.StatusOK, true)
+	totalCount, err := logic.CountPlaces()
+	if err != nil {
+		log.Error().Err(err).Msg("Error on counting places")
+		utils.WriteHttpJsonResponse(w, http.StatusBadRequest, err.Error())
+		return
+	}
+
+	response.ActualCount = totalCount
+
+	utils.WriteHttpJsonResponse(w, http.StatusOK, response)
 }
 
 func ListPlaces(w http.ResponseWriter, r *http.Request) {
