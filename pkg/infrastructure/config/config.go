@@ -35,3 +35,16 @@ func getNameOfConfigFile() (fileName string) {
 func Call() *viper.Viper {
 	return config
 }
+
+// InitForTest, reads yml file and initializes config instance for testing.
+func InitForTest() {
+	config = viper.New()
+	config.SetConfigType("yml")
+	config.AddConfigPath("c:/workspace/go/src/location_store/configs")
+	config.SetConfigName(getNameOfConfigFile())
+
+	err := config.ReadInConfig()
+	if err != nil {
+		log.Fatal().Err(err).Msg("Error on reading config file.")
+	}
+}
