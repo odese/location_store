@@ -46,4 +46,8 @@ https://api.yelp.com/v3/businesses/search?term=delis&latitude=37.786882&longitud
 
 https://docs.developer.yelp.com/docs/fusion-intro
 
+![tree](https://user-images.githubusercontent.com/46742766/232639719-83a0adb1-d966-449e-853d-277e6d137cbc.png)
+![api1](https://user-images.githubusercontent.com/46742766/232639732-11904016-bcfa-4e17-a4f1-500bedb11051.png)
+![api2](https://user-images.githubusercontent.com/46742766/232639738-bb8ac424-809e-44f2-bd99-85a4e43a151f.png)
+![test](https://user-images.githubusercontent.com/46742766/232639742-95455a33-08aa-4d93-8151-c335d1160498.png)
 
