@@ -64,5 +64,7 @@ Searching on Yelp concurently with different offset parameters for each individu
 I enabled the postgis extension as you can see in functions. 
 
 As I asked before "I may ask questions about the fields on postgis later, the meaning of fields etc." I was trying to ask you meaning of these fields.
+![1](https://user-images.githubusercontent.com/46742766/232644701-590af9f3-5687-4f8b-82b1-ae226bcb7ed0.png)
 
 I enabled but not used anything about postgis.
+![2](https://user-images.githubusercontent.com/46742766/232644722-b749415d-bd6a-4c45-8bf8-8f7583aa084b.png)
